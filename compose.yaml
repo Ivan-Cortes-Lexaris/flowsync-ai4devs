@@ -1,0 +1,50 @@
+# FlowSync — bases de datos locales.
+#
+# Dos PostgreSQL separados: `db` para desarrollo y `db-test` para la batería de
+# pruebas. Se levantan con `make db-up`, que espera a que los dos estén sanos.
+#
+# Los puertos no son el 5432 a propósito: quien tenga un PostgreSQL propio
+# levantado se lo encontraría ocupado.
+
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: flowsync
+      POSTGRES_PASSWORD: flowsync
+      POSTGRES_DB: flowsync_dev
+    ports:
+      - '54410:5432'
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    # Por TCP (`-h localhost`) y no por el socket: la primera vez, la imagen
+    # levanta un servidor temporal que solo escucha en el socket mientras crea
+    # la base. Comprobando por socket se daría por sano antes de tiempo.
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h localhost -U flowsync -d flowsync_dev']
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+
+  db-test:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: flowsync
+      POSTGRES_PASSWORD: flowsync
+      POSTGRES_DB: flowsync_test
+    ports:
+      - '54411:5432'
+    # En memoria y sin volumen: la base de pruebas es efímera a propósito. Cada
+    # vez que se recrea el contenedor arranca vacía.
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h localhost -U flowsync -d flowsync_test']
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+
+volumes:
+  db-data:
