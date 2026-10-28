@@ -101,3 +101,26 @@ todavía: enséñamelo. Commitea en pipeline-Ivan-Cortes-Lexaris.
 ```
 
 **Qué salió:** `make ci-lint` en silencio y con código 0 a la primera (la única salida fue la descarga de `rhysd/actionlint:1.7.12`). SHAs resueltos con `gh api repos/<owner>/<repo>/git/ref/tags/<tag>`: checkout v7.0.1, setup-node v7.1.0, railwayapp/config v1.2.0. Simulé el trabajo `test` en local (sin `backend/.env`, `CI=true` y el `env:` del job): 69 passed y la línea del recuento se extrae bien. El choque de `docker compose` con el servicio en el 54411 lo vi leyendo el Makefile antes de lanzar el prompt, no lo destapó actionlint, que no lo habría visto.
+
+---
+
+## Prompt 3
+
+**Modelo:** Opus 5.5
+**Herramienta:** Claude Code
+
+```
+Parte C. Reescribe HALLAZGOS.md (trae la plantilla de otro ejercicio) con las tres líneas de
+esta sesión, una sola línea por punto y con datos medidos, no supuestos:
+1. Cuánto pesa la imagen (docker images flowsync-api:local) y qué tuvo que declarar el
+   Dockerfile que mi portátil daba por hecho.
+2. El mensaje literal de `docker run --rm flowsync-api:local` sin variables, cuántas son y
+   cuáles son secreto y cuáles configuración (usa Env.schema.secret() de start/env.ts como
+   referencia, pero razona cada una). Compáralo con las claves de backend/.env: qué sobra.
+3. Qué NO comprueba el pipeline: lista corta y concreta de lo que ninguno de los cinco trabajos
+   afirma. Nada de "faltan cosas".
+Pega el mensaje literal entero debajo de la línea 2 como evidencia, sin códigos de color.
+Commitea en pipeline-Ivan-Cortes-Lexaris.
+```
+
+**Qué salió:** a la primera.
