@@ -14,7 +14,7 @@ BACKEND  := backend
 FRONTEND := frontend
 
 .DEFAULT_GOAL := help
-.PHONY: test-unit test-e2e ui test-ui test-web hooks help setup start install env db-up db-down migrate seed db-readonly copia-produccion test clean
+.PHONY: test-unit test-e2e ui test-ui test-web hooks help setup start install env db-up db-down migrate seed db-readonly copia-produccion test clean image image-run image-stop
 
 # La ayuda se genera a partir de los comentarios `## ...` de cada target, para
 # que no haya un segundo listado que mantener a mano y que pueda divergir.
@@ -152,6 +152,47 @@ test-web: ## Corre el recorrido de navegador (Playwright; necesita la aplicació
 hooks: ## Activa los hooks de git del repo (pre-push: make test-ui); una vez por clon
 	@git config core.hooksPath .githooks
 	@echo "✅ Hooks activados (core.hooksPath = .githooks). Antes de cada push correrá: make test-ui"
+
+# ---------------------------------------------------------------------------
+# imagen de la API (backend/Dockerfile)
+# ---------------------------------------------------------------------------
+
+IMAGE      := flowsync-api:local
+CONTAINER  := flowsync-api-local
+IMAGE_PORT ?= 3334
+
+image: ## Construye la imagen de la API (flowsync-api:local)
+	@echo "🐳 Construyendo $(IMAGE)..."
+	@docker build -t $(IMAGE) $(BACKEND)
+
+# backend/.env da la base de la configuración y tres valores se fuerzan encima:
+#   - HOST=0.0.0.0: con localhost el servidor solo escucharía dentro del
+#     contenedor y el puerto publicado no llegaría a nada.
+#   - DB_HOST=host.docker.internal: dentro del contenedor localhost es el propio
+#     contenedor; la base de desarrollo está en la máquina, en el 54410.
+#   - APP_URL: --env-file pasa los valores literales y no expande el
+#     ${HOST}:${PORT} del .env, que start/env.ts rechazaría como URL.
+# --add-host hace que host.docker.internal exista también en Linux, donde
+# Docker no lo define solo. El sleep da margen al arranque antes del curl.
+# Pide la base de desarrollo levantada (make db-up).
+image-run: ## Arranca la imagen en segundo plano en IMAGE_PORT (3334) y le hace un curl
+	@test -f $(BACKEND)/.env || { echo "❌ Falta $(BACKEND)/.env. Ejecuta primero: make setup"; exit 1; }
+	@echo "🐳 Arrancando $(CONTAINER) en http://localhost:$(IMAGE_PORT)..."
+	@docker run -d --name $(CONTAINER) \
+		-p $(IMAGE_PORT):3333 \
+		--add-host=host.docker.internal:host-gateway \
+		--env-file $(BACKEND)/.env \
+		-e HOST=0.0.0.0 \
+		-e DB_HOST=host.docker.internal \
+		-e APP_URL=http://localhost:$(IMAGE_PORT) \
+		$(IMAGE) >/dev/null
+	@sleep 3
+	@curl -s http://localhost:$(IMAGE_PORT); echo
+
+# `|| true` para que no falle si el contenedor ya no existe.
+image-stop: ## Para y borra el contenedor de la imagen
+	@docker rm -f $(CONTAINER) >/dev/null 2>&1 || true
+	@echo "🧹 $(CONTAINER) parado y borrado."
 
 # ---------------------------------------------------------------------------
 # start
